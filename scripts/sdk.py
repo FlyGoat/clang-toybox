@@ -25,7 +25,7 @@ for name, compiler in [("clang", "clang"), ("clang++", "clang++")]:
         'exec "$toolbin/' + compiler + '"'
         ' --target=' + shlex.quote(triple) +
         ' --sysroot="$sdk/rootfs" -resource-dir="$sdk/resource"'
-        ' --gcc-toolchain="$sdk/no-gcc" -fintegrated-as'
+        ' --gcc-toolchain="$sdk/no-gcc" -fintegrated-as -Qunused-arguments'
         ' --ld-path="$toolbin/ld.lld" --rtlib=compiler-rt'
         ' --unwindlib=' + ("none" if bootstrap else "libunwind") +
         ' -L"$sdk/rootfs/usr/lib" ' + shlex.join(flags) + extra + ' "$@"\n'
@@ -43,6 +43,9 @@ for name in ["ar", "ranlib", "nm", "strip", "objcopy", "objdump", "readelf"]:
     path.chmod(0o755)
 
 processor = triple.split("-")[0]
+# compiler-rt's supported architecture list uses base MIPS names. ISA revision
+# remains in the profile's -march flag; the driver keeps the requested triple.
+cmake_triple = triple.replace("mipsisa32r6", "mips").replace("mipsisa64r6", "mips64")
 (sdk / "toolchain.cmake").write_text(f'''get_filename_component(SDK_ROOT "${{CMAKE_CURRENT_LIST_DIR}}" ABSOLUTE)
 set(CMAKE_SYSTEM_NAME Linux)
 set(CMAKE_SYSTEM_PROCESSOR {processor})
@@ -50,9 +53,9 @@ set(CMAKE_SYSROOT "${{SDK_ROOT}}/rootfs")
 set(CMAKE_C_COMPILER "${{SDK_ROOT}}/bin/{triple}-clang")
 set(CMAKE_CXX_COMPILER "${{SDK_ROOT}}/bin/{triple}-clang++")
 set(CMAKE_ASM_COMPILER "${{SDK_ROOT}}/bin/{triple}-clang")
-set(CMAKE_C_COMPILER_TARGET {triple})
-set(CMAKE_CXX_COMPILER_TARGET {triple})
-set(CMAKE_ASM_COMPILER_TARGET {triple})
+set(CMAKE_C_COMPILER_TARGET {cmake_triple})
+set(CMAKE_CXX_COMPILER_TARGET {cmake_triple})
+set(CMAKE_ASM_COMPILER_TARGET {cmake_triple})
 set(CMAKE_AR "${{SDK_ROOT}}/bin/{triple}-ar")
 set(CMAKE_RANLIB "${{SDK_ROOT}}/bin/{triple}-ranlib")
 set(CMAKE_STRIP "${{SDK_ROOT}}/bin/{triple}-strip")

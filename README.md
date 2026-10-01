@@ -38,7 +38,8 @@ gh workflow run build.yml --repo flygoat/clang-toybox \
 
 1. Install Clang, LLD, LLVM tools, and LLVM CMake files from the **unversioned
    development suite** `llvm-toolchain-noble`, with apt.llvm.org preferred over
-   Ubuntu's packages. The workflow discovers the current development major.
+   Ubuntu's packages. The workflow discovers the current development major
+   from versioned snapshot packages, because LLVM meta-packages can lag behind.
 2. Resolve the upstream revision encoded in the installed Clang Debian package
    and check out matching LLVM runtime sources.
 3. Export MIPS Linux UAPI headers and configure musl to install libc headers.

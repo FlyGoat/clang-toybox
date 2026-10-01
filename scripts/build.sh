@@ -40,6 +40,7 @@ group 'Bootstrap compiler-rt builtins and crtbegin/crtend, without libc'
 cmake -G Ninja -S "$llvm/compiler-rt/lib/builtins" -B build/builtins \
   -DCMAKE_TOOLCHAIN_FILE="$sdk/toolchain.cmake" \
   -DCMAKE_BUILD_TYPE=Release -DCMAKE_TRY_COMPILE_TARGET_TYPE=STATIC_LIBRARY \
+  -DCMAKE_C_FLAGS_RELEASE=-DNDEBUG -DCMAKE_CXX_FLAGS_RELEASE=-DNDEBUG \
   -DCMAKE_C_FLAGS='-ffreestanding -fno-stack-protector' \
   -DCMAKE_CXX_FLAGS='-ffreestanding -fno-stack-protector' \
   -DCMAKE_INSTALL_PREFIX="$top/build/builtins-install" \
@@ -86,6 +87,7 @@ group 'Build LLVM libunwind, libc++abi, and libc++ for musl'
 cmake -G Ninja -S "$llvm/runtimes" -B build/runtimes \
   -DCMAKE_TOOLCHAIN_FILE="$sdk/toolchain.cmake" \
   -DCMAKE_BUILD_TYPE=Release -DCMAKE_TRY_COMPILE_TARGET_TYPE=STATIC_LIBRARY \
+  -DCMAKE_C_FLAGS_RELEASE=-DNDEBUG -DCMAKE_CXX_FLAGS_RELEASE=-DNDEBUG \
   -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_INSTALL_LIBDIR=lib \
   -DCMAKE_POSITION_INDEPENDENT_CODE=ON \
   -DLLVM_ENABLE_RUNTIMES='libunwind;libcxxabi;libcxx' \
