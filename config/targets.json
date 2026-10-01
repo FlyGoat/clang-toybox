@@ -1,0 +1,10 @@
+[
+  {"name":"mips32r2","triple":"mips-linux-musl","cflags":"-O2 -march=mips32r2 -mabi=32 -mhard-float -mfp32"},
+  {"name":"mipsel32r2","triple":"mipsel-linux-musl","cflags":"-O2 -march=mips32r2 -mabi=32 -mhard-float -mfp32"},
+  {"name":"mips32r2-soft","triple":"mips-linux-musl","cflags":"-Os -march=mips32r2 -mabi=32 -msoft-float"},
+  {"name":"mipsel32r2-soft","triple":"mipsel-linux-musl","cflags":"-Os -march=mips32r2 -mabi=32 -msoft-float"},
+  {"name":"mips64r2","triple":"mips64-linux-musl","cflags":"-O2 -march=mips64r2 -mabi=64 -mhard-float"},
+  {"name":"mips64elr2","triple":"mips64el-linux-musl","cflags":"-O2 -march=mips64r2 -mabi=64 -mhard-float"},
+  {"name":"mips32r6","triple":"mipsisa32r6-linux-musl","cflags":"-O2 -march=mips32r6 -mabi=32 -mhard-float -mfp64"},
+  {"name":"mipsel32r6","triple":"mipsisa32r6el-linux-musl","cflags":"-O2 -march=mips32r6 -mabi=32 -mhard-float -mfp64"}
+]

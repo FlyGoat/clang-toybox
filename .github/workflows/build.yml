@@ -1,0 +1,167 @@
+name: LLVM musl Toybox
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    - cron: '23 3 * * 1'
+  workflow_dispatch:
+    inputs:
+      triple:
+        description: 'Optional custom MIPS Linux musl triple; empty builds the full matrix'
+        type: string
+        default: ''
+      cflags:
+        description: 'Custom target CFLAGS (required with a custom triple)'
+        type: string
+        default: ''
+      publish:
+        description: 'Publish successful bundles as a GitHub release'
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: rootfs-${{ github.workflow }}-${{ github.ref }}-${{ github.event_name }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  matrix:
+    runs-on: ubuntu-24.04
+    outputs:
+      matrix: ${{ steps.config.outputs.matrix }}
+      musl_ref: ${{ steps.config.outputs.musl_ref }}
+      toybox_ref: ${{ steps.config.outputs.toybox_ref }}
+      linux_ref: ${{ steps.config.outputs.linux_ref }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Select target profiles and source pins
+        id: config
+        env:
+          INPUT_TRIPLE: ${{ inputs.triple }}
+          INPUT_CFLAGS: ${{ inputs.cflags }}
+        run: python3 scripts/matrix.py
+
+  build:
+    needs: matrix
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.matrix.outputs.matrix) }}
+    name: ${{ matrix.name }}
+    env:
+      PROFILE: ${{ matrix.name }}
+      TARGET_TRIPLE: ${{ matrix.triple }}
+      TARGET_CFLAGS: ${{ matrix.cflags }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Install LLVM main snapshot from apt.llvm.org
+        id: llvm
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: bash scripts/install-llvm.sh
+      - name: Check out matching LLVM runtime sources
+        uses: actions/checkout@v4
+        with:
+          repository: llvm/llvm-project
+          ref: ${{ steps.llvm.outputs.source_ref }}
+          path: sources/llvm-project
+          persist-credentials: false
+          sparse-checkout: |
+            cmake
+            compiler-rt
+            libcxx
+            libcxxabi
+            libunwind
+            runtimes
+            third-party
+            llvm/cmake
+            llvm/include
+      - uses: actions/checkout@v4
+        with:
+          repository: ifduyue/musl
+          ref: ${{ needs.matrix.outputs.musl_ref }}
+          path: sources/musl
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          repository: landley/toybox
+          ref: ${{ needs.matrix.outputs.toybox_ref }}
+          path: sources/toybox
+          persist-credentials: false
+      - name: Check out Linux UAPI header sources
+        uses: actions/checkout@v4
+        with:
+          repository: torvalds/linux
+          ref: ${{ needs.matrix.outputs.linux_ref }}
+          path: sources/linux
+          persist-credentials: false
+          sparse-checkout: |
+            arch/mips
+            include
+            scripts
+            LICENSES
+      - name: Check builder scripts
+        run: |
+          shellcheck scripts/*.sh
+          bash -n scripts/*.sh
+      - name: Bootstrap and assemble SDK with rootfs
+        run: bash scripts/build.sh 2>&1 | tee build.log
+      - name: Check ELF output and relocated SDK compilation
+        run: bash scripts/check.sh 2>&1 | tee check.log
+      - name: Package one combined SDK and runtime tarball
+        run: bash scripts/package.sh
+      - name: Upload combined bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: clang-toybox-${{ matrix.name }}
+          path: |
+            out/*.tar.xz
+            out/*.sha256
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 30
+      - name: Upload diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: diagnostics-${{ matrix.name }}
+          path: |
+            build.log
+            check.log
+            out/**/manifest.json
+            build/**/CMakeCache.txt
+            build/**/CMakeFiles/CMakeConfigureLog.yaml
+          if-no-files-found: ignore
+          retention-days: 14
+
+  release:
+    needs: build
+    if: github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.publish)
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: clang-toybox-*
+          path: bundles
+          merge-multiple: true
+      - name: Publish weekly bundles
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          BUILD_COMMIT: ${{ github.sha }}
+        run: |
+          tag="build-$(date -u +%Y%m%d)-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          gh release create "$tag" bundles/*.tar.xz bundles/*.sha256 \
+            --target "$BUILD_COMMIT" --title "LLVM musl Toybox $tag" \
+            --notes 'One combined runtime rootfs and cross-compilation SDK per target profile. Build provenance is included in each manifest.json.'

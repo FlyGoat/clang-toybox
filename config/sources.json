@@ -1,0 +1,5 @@
+{
+  "musl": {"repository":"ifduyue/musl", "ref":"9fa28ece75d8a2191de7c5bb53bed224c5947417", "version":"1.2.6"},
+  "toybox": {"repository":"landley/toybox", "ref":"b7ec52ac35e075caffca5d330995d44e8dbfc8c3", "version":"0.8.14"},
+  "linux": {"repository":"torvalds/linux", "ref":"adc218676eef25575469234709c2d87185ca223a", "version":"6.12"}
+}
