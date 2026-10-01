@@ -2,6 +2,7 @@
 set -euo pipefail
 
 # Use the unversioned DEVELOPMENT suite, rather than llvm.sh's stable default.
+# shellcheck source=/dev/null
 source /etc/os-release
 [[ "$ID" == ubuntu && "$VERSION_CODENAME" == noble ]]
 sudo apt-get update

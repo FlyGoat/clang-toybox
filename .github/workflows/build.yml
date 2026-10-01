@@ -40,6 +40,10 @@ jobs:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
+      - name: Check builder scripts
+        run: |
+          shellcheck scripts/*.sh
+          for script in scripts/*.sh; do bash -n "$script"; done
       - name: Select target profiles and source pins
         id: config
         env:
@@ -109,10 +113,6 @@ jobs:
             include
             scripts
             LICENSES
-      - name: Check builder scripts
-        run: |
-          shellcheck scripts/*.sh
-          bash -n scripts/*.sh
       - name: Bootstrap and assemble SDK with rootfs
         run: bash scripts/build.sh 2>&1 | tee build.log
       - name: Check ELF output and relocated SDK compilation
